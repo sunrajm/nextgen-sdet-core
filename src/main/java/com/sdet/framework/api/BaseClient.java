@@ -1,4 +1,4 @@
-package com.sdet.framwork.api;
+package com.sdet.framework.api;
 
 import io.restassured.RestAssured;
 import io.restassured.builder.RequestSpecBuilder;
