@@ -10,7 +10,7 @@ export default defineConfig({
         baseURL: 'https://demo.playwright.dev/todomvc/',
         trace: 'on-first-retry',
         screenshot: 'only-on-failure',
-        headless: true,
+        headless: false,
         },
 
     projects:[
