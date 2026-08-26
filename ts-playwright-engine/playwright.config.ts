@@ -23,7 +23,6 @@ export default defineConfig({
         screenshot: 'only-on-failure',
         headless: false,
         },
-
     projects:[
         {
             name:'chromium',
