@@ -15,7 +15,7 @@ export default defineConfig({
     forbidOnly: !!process.env.CI,
     retries: process.env.CI?2:0,
     workers: process.env.CI?2:undefined,
-    reporter: [['html',{open:'never'}],['list']],
+    reporter: process.env.CI?[['blob'],['list']]:[['html',{open:'never'}]],
 
     use:{
         baseURL: ENV_URLS[ENV]|| ENV_URLS.qa,
