@@ -21,7 +21,7 @@ export default defineConfig({
         baseURL: ENV_URLS[ENV]|| ENV_URLS.qa,
         trace: 'on-first-retry',
         screenshot: 'only-on-failure',
-        headless: false,
+        headless: !!process.env.CI || true,
         },
     projects:[
         {
