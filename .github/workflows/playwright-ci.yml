@@ -25,8 +25,12 @@ jobs:
         run: npm ci || npm install
         working-directory: ./ts-playwright-engine
 
-      - name: Install Playwright Browsers with Dependencies
-        run: sudo npx playwright install --with-deps
+      - name: Install System OS Dependencies
+        run: sudo npx playwright install-deps
+        working-directory: ./ts-playwright-engine
+
+      - name: Install Playwright Browsers
+        run: npx playwright install
         working-directory: ./ts-playwright-engine
 
       - name: Execute Playwright Suite (QA Environment)
