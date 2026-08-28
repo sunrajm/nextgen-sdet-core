@@ -19,10 +19,12 @@ export default defineConfig({
 
     use:{
         baseURL: ENV_URLS[ENV]|| ENV_URLS.qa,
-        trace: 'on-first-retry',
+        trace: 'retain-on-failure',
         screenshot: 'only-on-failure',
+        video: 'retain-on-failure',
         headless: !!process.env.CI || true,
         },
+
     projects:[
         {
             name:'chromium',

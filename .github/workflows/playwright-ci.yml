@@ -7,15 +7,14 @@ on:
     branches: [ main ]
 
 jobs:
-  test-sharded:
-    name: Run Tests (Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }})
+  test-matrix:
+    name: Run ${{matrix.project}} suite
     timeout-minutes: 60
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        shardIndex: [ 1, 2, 3, 3 ]
-        shardTotal: [ 3 ]
+       project: [chromium, firefox, WebKit,mobile-chrome]
 
     steps:
       - name: Checkout Code
@@ -38,24 +37,32 @@ jobs:
         run: npx playwright install
         working-directory: ./ts-playwright-engine
 
-      - name: Execute Test Shard
+      - name: Execute Playwright Project Matrix
         env:
           CI: 'true'
           TEST_ENV: 'qa'
-        run: npx playwright test --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
+        run: npx playwright test --project=${{ matrix.project }}
         working-directory: ./ts-playwright-engine
 
-      - name: Upload Shard Blob Report
+      - name: Upload Project Blob Report
         uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
-          name: blob-report-${{ matrix.shardIndex }}
+          name: blob-report-${{ matrix.project }}
           path: ts-playwright-engine/blob-report/
           retention-days: 1
 
+      - name: Upload Failure Triage Traces & Screenshots
+        uses: actions/upload-artifact@v4
+        if: ${{ failure() }}
+        with:
+         name: failure-artifact-${{ matrix.project }}
+         path: ts-playwright-engine/test-results/
+         retention-days: 7
+
   merge-reports:
-    name: Merge Shard Reports into Unified HTML
-    needs: [ test-sharded ]
+    name: Merge Cross Browser Reports
+    needs: [ test-matrix ]
     if: ${{!cancelled() }}
     runs-on: ubuntu-latest
 
