@@ -9,8 +9,8 @@ test.describe('Engine validation Suite',()=>{
         await expect(header).toHaveText('todos');
     });
 
-    test('Deliberate Failure for Trace Verification',async({page})=>{
-        await page.goto('./');
-        await expect(page).toHaveTitle('Non-Existent Page Title');
-    });
+//     test('Deliberate Failure for Trace Verification',async({page})=>{
+//         await page.goto('./');
+//         await expect(page).toHaveTitle('Non-Existent Page Title');
+//     });
 });
