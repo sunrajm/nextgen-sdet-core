@@ -66,17 +66,22 @@ jobs:
         working-directory: ./ts-playwright-engine
 
       - name: Execute Playwright Project Matrix
-        # Step-level filter: Runs if automatic trigger, 'all' selected, or matrix project matches manual input
-        if: ${{ inputs.project == '' || inputs.project == 'all' || inputs.project == matrix.project }}
         env:
           CI: 'true'
-          TEST_ENV: ${{ inputs.environment || 'qa' }}
-        run: npx playwright test --project=${{ matrix.project }}
+          # Dynamically set TEST_ENV from manual dispatch input, defaulting to 'qa' for push/cron
+          TEST_ENV: ${{ github.event.inputs.environment || 'qa' }}
+        # Execute selected project or run all matrix projects
+        run: |
+          if [ "${{ github.event.inputs.project }}" != "" ] && [ "${{ github.event.inputs.project }}" != "all" ] && [ "${{ github.event.inputs.project }}" != "${{ matrix.project }}" ]; then
+            echo "Skipping ${{ matrix.project }} as manual input selected ${{ github.event.inputs.project }}"
+            exit 0
+          fi
+          npx playwright test --project=${{ matrix.project }}
         working-directory: ./ts-playwright-engine
 
       - name: Upload Project Blob Report
         uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() && (inputs.project == '' || inputs.project == 'all' || inputs.project == matrix.project) }}
+        if: ${{ !cancelled() }}
         with:
           name: blob-report-${{ matrix.project }}
           path: ts-playwright-engine/blob-report/
@@ -84,7 +89,7 @@ jobs:
 
       - name: Upload Failure Triage Traces & Screenshots
         uses: actions/upload-artifact@v4
-        if: ${{ failure() && (inputs.project == '' || inputs.project == 'all' || inputs.project == matrix.project) }}
+        if: ${{ failure() }}
         with:
           name: failure-artifacts-${{ matrix.project }}
           path: ts-playwright-engine/test-results/
