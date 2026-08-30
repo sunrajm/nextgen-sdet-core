@@ -39,12 +39,13 @@ jobs:
     name: Run ${{ matrix.project }} Suite
     timeout-minutes: 60
     runs-on: ubuntu-latest
-    # 🔍 Job-level filter: Only run job if 'all' is selected OR matrix project matches input
+      # 🔍 Job-level filter: Only run job if 'all' is selected OR matrix project matches input
     if: ${{ inputs.project == '' || inputs.project == 'all' || inputs.project == matrix.project }}
     strategy:
       fail-fast: false
       matrix:
-        project: [chromium, firefox, WebKit, mobile-chrome]
+        project: [ chromium, firefox, webkit, mobile-chrome ]
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
