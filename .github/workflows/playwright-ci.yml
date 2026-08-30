@@ -6,15 +6,43 @@ on:
   pull_request:
     branches: [ main ]
 
+  # 1. Manual Trigger with Input Parameters
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target Execution Environment'
+        required: true
+        default: 'qa'
+        type: choice
+        options:
+          - qa
+          - staging
+          - dev
+      project:
+        description: 'Select Browser/Device Project'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - chromium
+          - firefox
+          - webkit
+          - mobile-chrome
+
+  # 2. Scheduled Cron Trigger (Runs daily at 00:00 UTC / 5:30 AM IST)
+  schedule:
+    - cron: '0 0 * * *'
+
 jobs:
   test-matrix:
-    name: Run ${{matrix.project}} suite
+    name: Run ${{ matrix.project }} Suite
     timeout-minutes: 60
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-       project: [chromium, firefox, WebKit,mobile-chrome]
+        project: [ chromium, firefox, webkit, mobile-chrome ]
 
     steps:
       - name: Checkout Code
@@ -40,8 +68,15 @@ jobs:
       - name: Execute Playwright Project Matrix
         env:
           CI: 'true'
-          TEST_ENV: 'qa'
-        run: npx playwright test --project=${{ matrix.project }}
+          # Dynamically set TEST_ENV from manual dispatch input, defaulting to 'qa' for push/cron
+          TEST_ENV: ${{ github.event.inputs.environment || 'qa' }}
+        # Execute selected project or run all matrix projects
+        run: |
+          if [ "${{ github.event.inputs.project }}" != "" ] && [ "${{ github.event.inputs.project }}" != "all" ] && [ "${{ github.event.inputs.project }}" != "${{ matrix.project }}" ]; then
+            echo "Skipping ${{ matrix.project }} as manual input selected ${{ github.event.inputs.project }}"
+            exit 0
+          fi
+          npx playwright test --project=${{ matrix.project }}
         working-directory: ./ts-playwright-engine
 
       - name: Upload Project Blob Report
@@ -56,14 +91,14 @@ jobs:
         uses: actions/upload-artifact@v4
         if: ${{ failure() }}
         with:
-         name: failure-artifact-${{ matrix.project }}
-         path: ts-playwright-engine/test-results/
-         retention-days: 7
+          name: failure-artifacts-${{ matrix.project }}
+          path: ts-playwright-engine/test-results/
+          retention-days: 7
 
   merge-reports:
-    name: Merge Cross Browser Reports
+    name: Merge Cross-Browser Reports
     needs: [ test-matrix ]
-    if: ${{!cancelled() }}
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
 
     steps:
@@ -93,6 +128,6 @@ jobs:
       - name: Upload Unified HTML Report
         uses: actions/upload-artifact@v4
         with:
-          name: unified-playwright-html-report
+          name: unified-crossbrowser-html-report
           path: ts-playwright-engine/playwright-report/
           retention-days: 14
