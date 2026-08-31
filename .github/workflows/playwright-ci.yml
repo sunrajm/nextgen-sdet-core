@@ -131,3 +131,24 @@ jobs:
           name: unified-crossbrowser-html-report
           path: ts-playwright-engine/playwright-report/
           retention-days: 14
+
+  notify-status:
+    name: Post Slack Notification
+    needs: [merge-reports, test-matrix]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send Slack Webhook Alert
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ needs.test-matrix.result }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+          text: |
+            *Playwright Enterprise Suite Execution Finished*
+            *Environment:* `${{ inputs.environment || 'qa' }}`
+            *Trigger:* `${{ github.eventName }}`
+            *Status:* `${{ needs.test-matrix.result }}`
+        env:
+            SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        if: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
