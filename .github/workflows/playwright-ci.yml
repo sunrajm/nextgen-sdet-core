@@ -141,6 +141,9 @@ jobs:
     steps:
       - name: Send Slack Webhook Alert
         uses: 8398a7/action-slack@v3
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        if: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
         with:
           status: ${{ needs.test-matrix.result }}
           fields: repo,message,commit,author,action,eventName,ref,workflow
@@ -149,6 +152,3 @@ jobs:
             *Environment:* `${{ inputs.environment || 'qa' }}`
             *Trigger:* `${{ github.eventName }}`
             *Status:* `${{ needs.test-matrix.result }}`
-        env:
-            SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        if: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
