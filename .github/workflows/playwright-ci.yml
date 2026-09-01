@@ -42,7 +42,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [chromium, firefox, webkit, mobile-chrome]
+        project: [ chromium, firefox, webkit, mobile-chrome ]
 
     steps:
       - name: Checkout Code
@@ -97,7 +97,7 @@ jobs:
 
   merge-reports:
     name: Merge Cross-Browser Reports
-    needs: [test-matrix]
+    needs: [ test-matrix ]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
 
@@ -132,9 +132,67 @@ jobs:
           path: ts-playwright-engine/playwright-report/
           retention-days: 14
 
+  failure-triage-email:
+    name: Parse Failure Logs & Send Email Alert
+    needs: [ test-matrix,merge-reports ]
+    if: ${{ always() && needs.test-matrix.result == 'failure' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Download Failure Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ts-playwright-engine/failure-artifacts
+          pattern: failure-artifacts-*
+          merge-multiple: true
+
+      - name: Extract Failure Logs
+        id: parse-logs
+        run: |
+          echo "=== Extracting Failed Specs ==="
+          mkdir -p ts-playwright-engine/triage-summary
+          
+          # Find failed trace files or test result summaries
+          if [ -d "ts-playwright-engine/failed-artifacts" ]; then
+            ls -la ts-playwright-engine/failed-artifacts > ts-playwright-engine/triage-summary/failed-files.txt
+          else
+            echo "No trace artifacts found." > ts-playwright-engine/triage-summary/failed-files.txt
+          fi
+          
+          # Generate simple log summary for email body
+          echo "FAILED_BUILD_URL=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
+
+      - name: Send Custom HTML Failure Email
+        uses: dawidd6/action-send-mail@v3
+        env:
+          MAIL_SERVER: ${{ secrets.MAIL_SERVER }}
+        if: ${{ env.MAIL_SERVER != '' }}
+        with:
+          server_address: ${{ secrets.MAIL_SERVER }}
+          server_port: ${{ secrets.MAIL_PORT }}
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "🚨 CRITICAL: Playwright Regression Failure - ${{ inputs.environment || 'qa' }} Environment"
+          to: ${{ secrets.MAIL_RECIPIENT }}
+          from: "Playwright CI Bot <${{ secrets.MAIL_USERNAME }}>"
+          secure: true
+          html_body: |
+            <h2>Playwright Test Execution Failed</h2>
+            <p><strong>Environment:</strong> ${{ inputs.environment || 'qa' }}</p>
+            <p><strong>Triggered By:</strong> ${{ github.actor }} (${{ github.eventName }})</p>
+            <p><strong>Branch/Ref:</strong> ${{ github.ref }}</p>
+            <p><strong>Commit:</strong> ${{ github.sha }}</p>
+            <hr />
+            <h3>Action Required</h3>
+            <p>One or more cross-browser test suites failed during parallel matrix execution.</p>
+            <p><a href="${{ env.FAILED_BUILD_URL }}" style="background-color: #d9534f; color: white; padding: 10px 15px; text-decoration: none; border-radius: 4px;">View Pipeline Run & Download HTML Report</a></p>
+
   notify-status:
     name: Post Slack Notification
-    needs: [merge-reports, test-matrix]
+    needs: [ merge-reports, test-matrix ]
     if: ${{ always() }}
     runs-on: ubuntu-latest
 
