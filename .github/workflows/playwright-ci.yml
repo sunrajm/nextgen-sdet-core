@@ -89,11 +89,14 @@ jobs:
 
       - name: Upload Failure Triage Traces & Screenshots
         uses: actions/upload-artifact@v4
-        if: ${{ failure() }}
+        if: ${{ failure() && (inputs.project == '' || inputs.project == 'all' || inputs.project == matrix.project) }}
         with:
-          name: failure-artifacts-${{ matrix.project }}
-          path: ts-playwright-engine/test-results/
-          retention-days: 7
+            name: failure-artifacts-${{ matrix.project }}
+            path: |
+              ts-playwright-engine/test-results/**/*.png
+              ts-playwright-engine/test-results/**/*.zip
+              ts-playwright-engine/test-results/**/*.webm
+            retention-days: 7
 
   merge-reports:
     name: Merge Cross-Browser Reports
