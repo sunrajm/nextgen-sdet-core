@@ -34,6 +34,11 @@ on:
   schedule:
     - cron: '0 0 * * *'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+#🔍 Automatically cancel redundant workflow runs when a new commit is pushed to an open PR
 jobs:
   test-matrix:
     name: Run ${{ matrix.project }} Suite
