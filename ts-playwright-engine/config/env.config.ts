@@ -13,12 +13,12 @@ const environments: Record<string, EnvironmentConfig> = {
         tenantId: 'tenant-qa-01',
     },
     staging: {
-        baseUrl: 'https://staging.reqres.in',
+        baseUrl: 'https://demo.playwright.dev/todomvc/#/staging',
         apiUrl: 'https://staging-api.reqres.in',
         tenantId: 'tenant-staging-01',
     },
     dev: {
-        baseUrl: 'https://dev.reqres.in',
+        baseUrl: 'https://demo.playwright.dev/todomvc/#/dev',
         apiUrl: 'https://dev-api.reqres.in',
         tenantId: 'tenant-dev-01',
     },
