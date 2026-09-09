@@ -5,8 +5,6 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-
-  # 1. Manual Trigger with Input Parameters
   workflow_dispatch:
     inputs:
       environment:
@@ -29,8 +27,6 @@ on:
           - firefox
           - webkit
           - mobile-chrome
-
-  # 2. Scheduled Cron Trigger (Runs daily at 00:00 UTC / 5:30 AM IST)
   schedule:
     - cron: '0 0 * * *'
 
@@ -38,7 +34,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-#🔍 Automatically cancel redundant workflow runs when a new commit is pushed to an open PR
 jobs:
   test-matrix:
     name: Run ${{ matrix.project }} Suite
@@ -57,28 +52,30 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
+          cache-dependency-path: ts-playwright-engine/package-lock.json
 
       - name: Install Dependencies
         run: npm ci || npm install
         working-directory: ./ts-playwright-engine
 
-      - name: Install System OS Dependencies
-        run: sudo npx playwright install-deps
-        working-directory: ./ts-playwright-engine
-
-      - name: Install Playwright Browsers
-        run: npx playwright install
+      - name: Install Target Matrix Browser
+        run: |
+          BROWSER_TARGET="${{ matrix.project }}"
+          if [ "$BROWSER_TARGET" = "mobile-chrome" ]; then
+            BROWSER_TARGET="chromium"
+          fi
+          npx playwright install --with-deps $BROWSER_TARGET
         working-directory: ./ts-playwright-engine
 
       - name: Execute Playwright Project Matrix
         env:
           CI: 'true'
-          # Dynamically set TEST_ENV from manual dispatch input, defaulting to 'qa' for push/cron
           TEST_ENV: ${{ github.event.inputs.environment || 'qa' }}
-        # Execute selected project or run all matrix projects
         run: |
-          if [ "${{ github.event.inputs.project }}" != "" ] && [ "${{ github.event.inputs.project }}" != "all" ] && [ "${{ github.event.inputs.project }}" != "${{ matrix.project }}" ]; then
-            echo "Skipping ${{ matrix.project }} as manual input selected ${{ github.event.inputs.project }}"
+          SELECTED_PROJECT="${{ github.event.inputs.project }}"
+          if [ -n "$SELECTED_PROJECT" ] && [ "$SELECTED_PROJECT" != "all" ] && [ "$SELECTED_PROJECT" != "${{ matrix.project }}" ]; then
+            echo "Skipping ${{ matrix.project }} as manual input selected $SELECTED_PROJECT"
             exit 0
           fi
           npx playwright test --project=${{ matrix.project }}
@@ -94,14 +91,14 @@ jobs:
 
       - name: Upload Failure Triage Traces & Screenshots
         uses: actions/upload-artifact@v4
-        if: ${{ failure() && (inputs.project == '' || inputs.project == 'all' || inputs.project == matrix.project) }}
+        if: ${{ failure() }}
         with:
-            name: failure-artifacts-${{ matrix.project }}
-            path: |
-              ts-playwright-engine/test-results/**/*.png
-              ts-playwright-engine/test-results/**/*.zip
-              ts-playwright-engine/test-results/**/*.webm
-            retention-days: 7
+          name: failure-artifacts-${{ matrix.project }}
+          path: |
+            ts-playwright-engine/test-results/**/*.png
+            ts-playwright-engine/test-results/**/*.zip
+            ts-playwright-engine/test-results/**/*.webm
+          retention-days: 7
 
   merge-reports:
     name: Merge Cross-Browser Reports
@@ -142,7 +139,7 @@ jobs:
 
   failure-triage-email:
     name: Parse Failure Logs & Send Email Alert
-    needs: [ test-matrix,merge-reports ]
+    needs: [ test-matrix, merge-reports ]
     if: ${{ always() && needs.test-matrix.result == 'failure' }}
     runs-on: ubuntu-latest
 
@@ -152,6 +149,7 @@ jobs:
 
       - name: Download Failure Artifacts
         uses: actions/download-artifact@v4
+        if: ${{ always() }}
         with:
           path: ts-playwright-engine/failure-artifacts
           pattern: failure-artifacts-*
@@ -163,33 +161,45 @@ jobs:
           echo "=== Extracting Failed Specs ==="
           mkdir -p ts-playwright-engine/triage-summary
           
-          # Find failed trace files or test result summaries
-          if [ -d "ts-playwright-engine/failed-artifacts" ]; then
-            ls -la ts-playwright-engine/failed-artifacts > ts-playwright-engine/triage-summary/failed-files.txt
+          if [ -d "ts-playwright-engine/failure-artifacts" ]; then
+            ls -la ts-playwright-engine/failure-artifacts > ts-playwright-engine/triage-summary/failed-files.txt
           else
             echo "No trace artifacts found." > ts-playwright-engine/triage-summary/failed-files.txt
           fi
           
-          # Generate simple log summary for email body
           echo "FAILED_BUILD_URL=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
 
-      - name: Send Custom HTML Failure Email
-        uses: dawidd6/action-send-mail@v3
+      - name: Check Email Alert Configuration
+        id: mail-config
+        shell: bash
         env:
           MAIL_SERVER: ${{ secrets.MAIL_SERVER }}
-        if: ${{ env.MAIL_SERVER != '' }}
+          MAIL_PORT: ${{ secrets.MAIL_PORT }}
+          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          MAIL_RECIPIENT: ${{ secrets.MAIL_RECIPIENT }}
+        run: |
+          if [ -n "${MAIL_SERVER:-}" ] && [ -n "${MAIL_PORT:-}" ] && [ -n "${MAIL_USERNAME:-}" ] && [ -n "${MAIL_PASSWORD:-}" ] && [ -n "${MAIL_RECIPIENT:-}" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Send Custom HTML Failure Email
+        if: ${{ steps.mail-config.outputs.enabled == 'true' }}
+        uses: dawidd6/action-send-mail@v3
         with:
           server_address: ${{ secrets.MAIL_SERVER }}
           server_port: ${{ secrets.MAIL_PORT }}
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
-          subject: "🚨 CRITICAL: Playwright Regression Failure - ${{ inputs.environment || 'qa' }} Environment"
+          subject: "🚨 CRITICAL: Playwright Regression Failure - ${{ github.event.inputs.environment || 'qa' }} Environment"
           to: ${{ secrets.MAIL_RECIPIENT }}
           from: "Playwright CI Bot <${{ secrets.MAIL_USERNAME }}>"
           secure: true
           html_body: |
             <h2>Playwright Test Execution Failed</h2>
-            <p><strong>Environment:</strong> ${{ inputs.environment || 'qa' }}</p>
+            <p><strong>Environment:</strong> ${{ github.event.inputs.environment || 'qa' }}</p>
             <p><strong>Triggered By:</strong> ${{ github.actor }} (${{ github.eventName }})</p>
             <p><strong>Branch/Ref:</strong> ${{ github.ref }}</p>
             <p><strong>Commit:</strong> ${{ github.sha }}</p>
@@ -205,15 +215,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Send Slack Webhook Alert
+      - name: Check Slack Notification Configuration
+        id: slack-config
+        shell: bash
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        uses: 8398a7/action-slack@v3
+        run: |
+          if [ -n "${SLACK_WEBHOOK_URL:-}" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Send Slack Webhook Alert
+        if: ${{ steps.slack-config.outputs.enabled == 'true' }}
+        uses: slackapi/slack-github-action@v1.26.0
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
         with:
-          status: ${{ needs.test-matrix.result }}
-          fields: repo,message,commit,author,action,eventName,ref,workflow
-          text: |
-            *Playwright Enterprise Suite Execution Finished*
-            *Environment:* `${{ inputs.environment || 'qa' }}`
-            *Trigger:* `${{ github.eventName }}`
-            *Status:* `${{ needs.test-matrix.result }}`
+          payload: |
+            {
+              "text": "🎭 *Playwright Suite Finished*\n*Environment:* `${{ github.event.inputs.environment || 'qa' }}`\n*Status:* `${{ needs.test-matrix.result }}`\n*Repository:* `${{ github.repository }}`\n*Triggered By:* `${{ github.actor }}`"
+            }
