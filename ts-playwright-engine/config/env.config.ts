@@ -7,7 +7,7 @@ export interface EnvironmentConfig {
 
 const environments: Record<string, EnvironmentConfig> = {
     qa: {
-        baseUrl: 'https://qa.reqres.in',
+        baseUrl: 'https://demo.playwright.dev/todomvc/#/',
         apiUrl: 'https://qa-api.reqres.in',
         tenantId: 'tenant-qa-01',
     },
