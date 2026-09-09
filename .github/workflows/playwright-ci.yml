@@ -163,11 +163,25 @@ jobs:
           
           echo "FAILED_BUILD_URL=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
 
-      - name: Send Custom HTML Failure Email
-        uses: dawidd6/action-send-mail@v3
+      - name: Check Email Alert Configuration
+        id: mail-config
+        shell: bash
         env:
-          MAIL_SERVER_VAL: ${{ secrets.MAIL_SERVER }}
-        if: ${{ env.MAIL_SERVER_VAL != '' }}
+          MAIL_SERVER: ${{ secrets.MAIL_SERVER }}
+          MAIL_PORT: ${{ secrets.MAIL_PORT }}
+          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          MAIL_RECIPIENT: ${{ secrets.MAIL_RECIPIENT }}
+        run: |
+          if [ -n "${MAIL_SERVER:-}" ] && [ -n "${MAIL_PORT:-}" ] && [ -n "${MAIL_USERNAME:-}" ] && [ -n "${MAIL_PASSWORD:-}" ] && [ -n "${MAIL_RECIPIENT:-}" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Send Custom HTML Failure Email
+        if: ${{ steps.mail-config.outputs.enabled == 'true' }}
+        uses: dawidd6/action-send-mail@v3
         with:
           server_address: ${{ secrets.MAIL_SERVER }}
           server_port: ${{ secrets.MAIL_PORT }}
@@ -195,10 +209,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Send Slack Webhook Alert
+      - name: Check Slack Notification Configuration
+        id: slack-config
+        shell: bash
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        if: ${{ env.SLACK_WEBHOOK_URL != '' }}
+        run: |
+          if [ -n "${SLACK_WEBHOOK_URL:-}" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Send Slack Webhook Alert
+        if: ${{ steps.slack-config.outputs.enabled == 'true' }}
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ needs.test-matrix.result }}
