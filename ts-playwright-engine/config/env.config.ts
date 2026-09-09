@@ -1,5 +1,4 @@
 /// <reference types="node" />
-
 export interface EnvironmentConfig {
     baseUrl: string;
     apiUrl: string;
