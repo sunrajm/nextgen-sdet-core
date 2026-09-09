@@ -236,5 +236,5 @@ jobs:
         with:
           payload: |
             {
-              "text": " Playwright Enterprise Suite Execution Finished\n*Environment:* `${{ github.event.inputs.environment || 'qa' }}`\n*Status:* `${{ needs.test-matrix.result }}`\n*Repository:* `${{ github.repository }}`\n*Author:* `${{ github.actor }}`"
+              "text": "🎭 *Playwright Suite Finished*\n*Environment:* `${{ github.event.inputs.environment || 'qa' }}`\n*Status:* `${{ needs.test-matrix.result }}`\n*Repository:* `${{ github.repository }}`\n*Triggered By:* `${{ github.actor }}`"
             }
