@@ -59,8 +59,13 @@ jobs:
         run: npm ci || npm install
         working-directory: ./ts-playwright-engine
 
-      - name: Install Target Matrix Browser Only
-        run: npx playwright install --with-deps ${{ matrix.project }}
+      - name: Install Target Matrix Browser
+        run: |
+          BROWSER_TARGET="${{ matrix.project }}"
+          if [ "$BROWSER_TARGET" = "mobile-chrome" ]; then
+            BROWSER_TARGET="chromium"
+          fi
+          npx playwright install --with-deps $BROWSER_TARGET
         working-directory: ./ts-playwright-engine
 
       - name: Execute Playwright Project Matrix
@@ -144,6 +149,7 @@ jobs:
 
       - name: Download Failure Artifacts
         uses: actions/download-artifact@v4
+        if: ${{ always() }}
         with:
           path: ts-playwright-engine/failure-artifacts
           pattern: failure-artifacts-*
@@ -224,6 +230,8 @@ jobs:
       - name: Send Slack Webhook Alert
         if: ${{ steps.slack-config.outputs.enabled == 'true' }}
         uses: 8398a7/action-slack@v3
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:
           status: ${{ needs.test-matrix.result }}
           fields: repo,message,commit,author,action,eventName,ref,workflow
