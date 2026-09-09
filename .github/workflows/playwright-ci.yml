@@ -165,7 +165,9 @@ jobs:
 
       - name: Send Custom HTML Failure Email
         uses: dawidd6/action-send-mail@v3
-        if: ${{ secrets.MAIL_SERVER != '' }}
+        env:
+          MAIL_SERVER_VAL: ${{ secrets.MAIL_SERVER }}
+        if: ${{ env.MAIL_SERVER_VAL != '' }}
         with:
           server_address: ${{ secrets.MAIL_SERVER }}
           server_port: ${{ secrets.MAIL_PORT }}
@@ -189,13 +191,14 @@ jobs:
   notify-status:
     name: Post Slack Notification
     needs: [ merge-reports, test-matrix ]
-    if: ${{ always() && secrets.SLACK_WEBHOOK_URL != '' }}
+    if: ${{ always() }}
     runs-on: ubuntu-latest
 
     steps:
       - name: Send Slack Webhook Alert
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        if: ${{ env.SLACK_WEBHOOK_URL != '' }}
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ needs.test-matrix.result }}
