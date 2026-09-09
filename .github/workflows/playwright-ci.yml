@@ -229,14 +229,12 @@ jobs:
 
       - name: Send Slack Webhook Alert
         if: ${{ steps.slack-config.outputs.enabled == 'true' }}
-        uses: 8398a7/action-slack@v3
+        uses: slackapi/slack-github-action@v1.26.0
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
         with:
-          status: ${{ needs.test-matrix.result }}
-          fields: repo,message,commit,author,action,eventName,ref,workflow
-          text: |
-            *Playwright Enterprise Suite Execution Finished*
-            *Environment:* `${{ github.event.inputs.environment || 'qa' }}`
-            *Trigger:* `${{ github.eventName }}`
-            *Status:* `${{ needs.test-matrix.result }}`
+          payload: |
+            {
+              "text": " Playwright Enterprise Suite Execution Finished\n*Environment:* `${{ github.event.inputs.environment || 'qa' }}`\n*Status:* `${{ needs.test-matrix.result }}`\n*Repository:* `${{ github.repository }}`\n*Author:* `${{ github.actor }}`"
+            }
