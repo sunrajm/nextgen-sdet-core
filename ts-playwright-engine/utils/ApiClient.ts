@@ -4,7 +4,7 @@ export class ApiClient {
     private request: APIRequestContext;
     private baseUrl: string;
 
-    constructor(request: APIRequestContext, baseUrl: string = 'https://demo.playwright.dev/todomvc/#/') {
+    constructor(request: APIRequestContext, baseUrl: string = 'https://reqres.in') {
         this.request = request;
         this.baseUrl = baseUrl;
     }
@@ -19,6 +19,8 @@ export class ApiClient {
         const response = await this.request.get(url, {
             headers: {
                 'content-type': 'application/json',
+                'Accept': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
                 ...headers
             },
         });
@@ -38,6 +40,8 @@ export class ApiClient {
             data:payload,
             headers:{
                 'content-type':'application/json',
+                'Accept': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
                 ...headers
             }
         });
