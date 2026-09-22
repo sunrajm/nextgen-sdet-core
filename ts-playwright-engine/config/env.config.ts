@@ -8,17 +8,17 @@ export interface EnvironmentConfig {
 const environments: Record<string, EnvironmentConfig> = {
     qa: {
         baseUrl: 'https://demo.playwright.dev/todomvc/#/',
-        apiUrl: 'https://qa-api.reqres.in',
+        apiUrl: 'https://reqres.in',
         tenantId: 'tenant-qa-01',
     },
     staging: {
         baseUrl: 'https://demo.playwright.dev/todomvc/#/staging',
-        apiUrl: 'https://staging-api.reqres.in',
+        apiUrl: 'https://reqres.in',
         tenantId: 'tenant-staging-01',
     },
     dev: {
         baseUrl: 'https://demo.playwright.dev/todomvc/#/dev',
-        apiUrl: 'https://dev-api.reqres.in',
+        apiUrl: 'https://reqres.in',
         tenantId: 'tenant-dev-01',
     },
 };

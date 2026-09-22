@@ -22,10 +22,10 @@ test.describe('API Suite: User Management & Schema Validation',()=>{
 
         // 2. Execute POST request
         const response = await apiClient.post('/users', payload);
-        expect(response.status()).toBe(201);
+        expect(response.status).toBe(201);
 
-        // 3. Parse JSON response
-        const responseData = await response.json();
+        // 3. Read JSON response from the client wrapper
+        const responseData = response.data;
         console.log('Response Data:', responseData);
 
         // 4. Validate data integrity
