@@ -11,6 +11,8 @@ export class ApiClient {
     // private request: APIRequestContext;
     // private baseUrl: string;
 
+    private readonly apiKey = process.env.REQRES_API_KEY || 'reqres-free-v1';
+
     constructor(private request: APIRequestContext, private baseUrl: string = '') {
     }
 
@@ -31,6 +33,7 @@ export class ApiClient {
                 'content-type': 'application/json',
                 'Accept': 'application/json',
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                'x-api-key': this.apiKey,
                 ...headers
             },
         });
@@ -61,6 +64,7 @@ export class ApiClient {
                 'content-type': 'application/json',
                 'Accept': 'application/json',
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                'x-api-key': this.apiKey,
                 ...headers
             }
         });

@@ -12,6 +12,7 @@ export default defineConfig({
     retries: process.env.CI ? 2 : 0,
     workers: process.env.CI ? 2 : 1,
     reporter: process.env.CI ? [['blob'], ['list']] : [['html', { open: 'never' }]],
+    globalSetup: require.resolve('./global-setup.ts'),
 
     use: {
         baseURL: activeEnv.baseUrl,
