@@ -89,6 +89,14 @@ jobs:
           path: ts-playwright-engine/blob-report/
           retention-days: 1
 
+      - name: Upload Allure Results Artifact
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: allure-results-${{ matrix.project }}
+          path: ts-playwright-engine/allure-results/
+          retention-days: 1
+
       - name: Upload Failure Triage Traces & Screenshots
         uses: actions/upload-artifact@v4
         if: ${{ failure() }}
@@ -130,11 +138,30 @@ jobs:
         run: npx playwright merge-reports ./all-blob-reports --reporter=html
         working-directory: ./ts-playwright-engine
 
+      - name: Download All Allure Results
+        uses: actions/download-artifact@v4
+        with:
+          path: ts-playwright-engine/all-allure-results
+          pattern: allure-results-*
+          merge-multiple: true
+
+      - name: Install Allure CLI & Generate Static Report
+        run: |
+                npm install -g allure-commandline --save-dev
+                npx allure generate ts-playwright-engine/all-allure-results --clean -o ts-playwright-engine/allure-report
+
       - name: Upload Unified HTML Report
         uses: actions/upload-artifact@v4
         with:
           name: unified-crossbrowser-html-report
           path: ts-playwright-engine/playwright-report/
+          retention-days: 14
+
+      - name: Upload Unified Allure HTML Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: unified-allure-html-report
+          path: ts-playwright-engine/allure-report/
           retention-days: 14
 
   failure-triage-email:

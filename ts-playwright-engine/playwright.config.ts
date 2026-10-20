@@ -11,7 +11,19 @@ export default defineConfig({
     forbidOnly: !!process.env.CI,
     retries: process.env.CI ? 2 : 0,
     workers: process.env.CI ? 2 : 1,
-    reporter: process.env.CI ? [['blob'], ['list']] : [['html', { open: 'never' }]],
+    reporter: process.env.CI ? [['blob'], ['list'],[
+        'allure-playwright',{
+            detail:true,
+            outputFolder: 'allure-results',
+            suiteTitle:true,
+            },
+        ]] : [['html', { open: 'never' }],[
+                                                  'allure-playwright',{
+                                                      detail:true,
+                                                      outputFolder: 'allure-results',
+                                                      suiteTitle:true,
+                                                      },
+                                                  ]],
     globalSetup: require.resolve('./global-setup.ts'),
 
     use: {
