@@ -1,0 +1,4 @@
+2026-10-26 12:52:48 [INFO]: [AuthenticatedUserTests] Starting test: Negative Auth check without token
+2026-10-26 12:52:48 [INFO]: [ApiClient] [API GET Request] URL: https://reqres.in/api/users/2
+2026-10-26 12:52:48 [INFO]: [ApiClient] [API GET Response] Status: 200
+2026-10-26 12:52:48 [INFO]: [AuthenticatedUserTests] Negative Auth test finished with status: 200

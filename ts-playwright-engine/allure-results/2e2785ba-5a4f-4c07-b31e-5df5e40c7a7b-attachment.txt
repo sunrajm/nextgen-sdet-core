@@ -1,0 +1,2 @@
+[API GET Request] URL: https://reqres.in/api/users/2
+[API GET Response] Status: 401
