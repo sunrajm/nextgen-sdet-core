@@ -16,6 +16,11 @@ export class ApiClient {
     private logger: Logger;
     private readonly apiKey = process.env.REQRES_API_KEY || 'reqres-free-v1';
 
+    // Static Circuit Breaker properties across all request instances
+    private static consecutiveFailures: number = 0;
+    private static readonly FAILURE_THRESHOLD: number = 3;
+    private static circuitOpen: boolean = false;
+
     constructor(
         private request: APIRequestContext,
         private baseUrl: string = '',
@@ -32,11 +37,42 @@ export class ApiClient {
         const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
         return this.baseUrl ? `${this.baseUrl.replace(/\/$/, '')}${cleanEndpoint}` : cleanEndpoint;
     }
+     /**
+     * Guards execution if the circuit breaker has tripped
+     */
+    private checkCircuitBreaker(): void {
+        if (ApiClient.circuitOpen) {
+            this.logger.error('CIRCUIT BREAKER IS OPEN: Request blocked to prevent cascading failures.');
+            throw new Error('CircuitBreakerOpenException: Downstream server is unresponsive (3+ consecutive 5xx errors).');
+        }
+    }
+
+     /**
+     * Updates consecutive failure counts based on server HTTP status codes
+     */
+    private recordResponseStatus(status: number): void {
+        if (status >= 500) {
+            ApiClient.consecutiveFailures++;
+            this.logger.warn(`Server Error (Status ${status}) detected. Consecutive failure count: ${ApiClient.consecutiveFailures}`);
+
+            if (ApiClient.consecutiveFailures >= ApiClient.FAILURE_THRESHOLD) {
+                ApiClient.circuitOpen = true;
+                this.logger.error(`CIRCUIT BREAKER TRIPPED TO OPEN STATE after ${ApiClient.consecutiveFailures} consecutive 5xx errors.`);
+            }
+        } else if (status >= 200 && status < 300) {
+            // Reset counter on success
+            if (ApiClient.consecutiveFailures > 0) {
+                ApiClient.consecutiveFailures = 0;
+                this.logger.info('Downstream service recovered. Consecutive failure counter reset to 0.');
+            }
+        }
+    }
 
     /**
      * Reusable GET request wrapper with Winston logging and Allure step decoration
      */
     async get<T = any>(endpoint: string, headers: Record<string, string> = {}): Promise<CustomApiResponse<T>> {
+        this.checkCircuitBreaker();
         const url = this.buildUrl(endpoint);
 
         return await allure.step(`API GET ${endpoint}`, async () => {
@@ -54,6 +90,7 @@ export class ApiClient {
                 });
 
                 const status = response.status();
+                this.recordResponseStatus(status);
                 this.logger.info(`[API GET Response] Status: ${status}`);
 
                 let data: any = null;
@@ -80,6 +117,7 @@ export class ApiClient {
      * Reusable POST request wrapper with Winston logging and Allure step decoration
      */
     async post<T = any>(endpoint: string, payload: object, headers: Record<string, string> = {}): Promise<CustomApiResponse<T>> {
+        this.checkCircuitBreaker();
         const url = this.buildUrl(endpoint);
 
         return await allure.step(`API POST ${endpoint}`, async () => {
@@ -99,6 +137,7 @@ export class ApiClient {
                 });
 
                 const status = response.status();
+                this.recordResponseStatus(status);
                 this.logger.info(`[API POST Response] Status: ${status}`);
 
                 let data: any = null;
@@ -125,6 +164,7 @@ export class ApiClient {
      * Reusable PUT request wrapper
      */
     async put<T = any>(endpoint: string, payload: object, headers: Record<string, string> = {}): Promise<CustomApiResponse<T>> {
+        this.checkCircuitBreaker();
         const url = this.buildUrl(endpoint);
 
         return await allure.step(`API PUT ${endpoint}`, async () => {
@@ -142,6 +182,7 @@ export class ApiClient {
                 });
 
                 const status = response.status();
+                this.recordResponseStatus(status);
                 this.logger.info(`[API PUT Response] Status: ${status}`);
 
                 let data: any = null;
@@ -163,6 +204,7 @@ export class ApiClient {
      * Reusable DELETE request wrapper
      */
     async delete<T = any>(endpoint: string, headers: Record<string, string> = {}): Promise<CustomApiResponse<T>> {
+        this.checkCircuitBreaker();
         const url = this.buildUrl(endpoint);
 
         return await allure.step(`API DELETE ${endpoint}`, async () => {
@@ -177,6 +219,7 @@ export class ApiClient {
                 });
 
                 const status = response.status();
+                this.recordResponseStatus(status);
                 this.logger.info(`[API DELETE Response] Status: ${status}`);
 
                 let data: any = null;
