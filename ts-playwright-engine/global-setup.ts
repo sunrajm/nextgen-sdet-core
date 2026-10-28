@@ -1,7 +1,7 @@
 ﻿import { request, FullConfig } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
-import {Logger} from './utils/logger';
+import {Logger} from './utils/Logger';
 
 const logger = new Logger('GlobalSetup');
 
